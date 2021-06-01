@@ -17,7 +17,7 @@ echo $PREFIX_DIR
 mkdir -p $PREFIX_DIR
 
 ${SUDO} apt-get update -y
-${SUDO} apt-get install make gcc g++ python-dev libglib2.0-dev docbook2x pkg-config nasm yasm m4 autoconf libtool automake cmake unzip wget -y
+${SUDO} apt-get install make gcc g++ python-dev libglib2.0-dev docbook2x pkg-config nasm yasm m4 autoconf libtool liblzma-dev automake cmake unzip wget -y
 
 rm -rf $BUILD_LIB_DIR
 

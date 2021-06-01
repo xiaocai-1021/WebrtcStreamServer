@@ -17,7 +17,7 @@ link_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty_dir/lib)
 
 file(GLOB SRC_LIST ./*.cpp)
 
-set(LINK_LIBRARYS avformat avcodec avfilter swresample avutil sdptransform srtp2 ssl crypto spdlog boost_thread dl opus z pthread)
+set(LINK_LIBRARYS avformat avcodec avfilter swresample avutil sdptransform srtp2 ssl crypto spdlog boost_thread dl opus bz2 lzma z pthread)
 
 add_executable(${PROJECT_NAME} ${SRC_LIST})
 
