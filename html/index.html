@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>WebrtcStreamServer Demo</title>
+  <style>
+    video {
+      border: 1px solid #000;
+      width: 800px;
+      height: 600px;
+    }
+
+    #input {
+      border: 1px solid #000;
+      width: 800px;
+    }
+
+    #controls {
+      border: 1px solid #000;
+      width: 800px;
+    }
+  </style>
+</head>
+
+<body>
+  <video id="player" autoplay muted></video>
+  <div id="input">
+    Setting
+    <br />
+    <input id="inputIp" type="text" name="ip" value="106.13.76.148">IP address of server.</input>
+    <br />
+    <input id="inputPort" type="text" name="port" value=8000>Listening port of server.</input>
+    <br />
+    <input id="streamAddress" type="text" name="rtmp stream address" value="rtmp://www.iptv-soft.com/live/111">Address
+    of RTMP stream.</input>
+  </div>
+  <div id="controls">
+    Controls
+    <br />
+    <button id="startPlay">Start</button>
+    <button id="stopPlay">Stop</button>
+  </div>
+</body>
+<script src="js/adapter.js"></script>
+<script src="js/client.js"></script>
+<script>
+  var player = document.getElementById('player');
+  var startPlay = document.getElementById('startPlay');
+  var stopPlay = document.getElementById('stopPlay');
+  var inputIp = document.getElementById('inputIp');
+  var inputPort = document.getElementById('inputPort');
+  var streamAddress = document.getElementById('streamAddress');
+
+  startPlay.addEventListener('click', start);
+  stopPlay.addEventListener('click', stop);
+
+  startPlay.disabled = false;
+  stopPlay.disabled = true;
+
+  var client;
+  async function start() {
+    if (streamAddress.value == '')
+      retun;
+
+    var addStreamAddr = "http://" + inputIp.value + ":" + inputPort.value + "/streams";
+    var req = new XMLHttpRequest();
+    req.open("POST", addStreamAddr, false);
+    var req_body = { url: streamAddress.value };
+    req.send(JSON.stringify(req_body));
+    var response = JSON.parse(req.responseText);
+    if (response.error)
+      return;
+    var streamId = response.id;
+
+    startPlay.disabled = true;
+    stopPlay.disabled = false;
+    console.log('Starting Call');
+
+    client = new WebrtcStreamClient(inputIp.value, inputPort.value);
+    client.addEventListener("onaddstream", (e) => {
+      player.srcObject = e.data.stream;
+    });
+    await client.connect(streamId);
+  }
+
+  function stop() {
+    startPlay.disabled = false;
+    stopPlay.disabled = true;
+    client.close();
+    player.load();
+  }
+</script>
+
+</html>
