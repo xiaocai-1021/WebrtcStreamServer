@@ -1,5 +1,5 @@
 # Webrtc stream server
-
+[![CMake](https://github.com/wxxit/WebrtcStreamServer/actions/workflows/cmake.yml/badge.svg)](https://github.com/wxxit/WebrtcStreamServer/actions/workflows/cmake.yml)
 WebrtcStreamServer accepts RTMP stream and plays it with webrtc.
 
 ## Platform
