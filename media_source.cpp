@@ -6,7 +6,7 @@
 
 bool MediaSource::IsIOTimeout() {
   int64_t io_time = TimeMillis() - last_io_time_;
-  return !closed_ ? io_time > kDefaultIOTimeout : true;
+  return !closed_ ? io_time > kDefaultIOTimeoutMillis : true;
 }
 
 void MediaSource::UpdateIOTime() {

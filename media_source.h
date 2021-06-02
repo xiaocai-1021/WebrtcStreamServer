@@ -40,7 +40,7 @@ class MediaSource {
   static int InterruptCB(void* opaque);
   bool IsIOTimeout();
   void UpdateIOTime();
-  const static uint32_t kDefaultIOTimeout = 10 * 1000; // 10s.
+  const static int64_t kDefaultIOTimeoutMillis = 10 * 1000; // 10s.
   AVFormatContext* stream_context_{nullptr};
   std::string url_;
   int video_index_{-1};
