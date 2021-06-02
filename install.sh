@@ -108,9 +108,8 @@ install_opus() {
     cd $BUILD_LIB_DIR
     tar zxvf opus-1.3.1.tar.gz
     cd opus-1.3.1
-    mkdir build
-    cd build
-    cmake -DCMAKE_INSTALL_PREFIX=$PREFIX_DIR ..
+    ./autogen.sh
+    ./configure --prefix=$PREFIX_DIR
     make
     make install
     cd $THIRDPARTY_ROOT_DIR
