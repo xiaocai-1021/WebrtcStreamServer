@@ -6,6 +6,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <cstdint>
 #include <boost/utility/string_view.hpp>
 
 #include "media_packet.h"
@@ -36,11 +37,15 @@ class MediaSource {
  private:
   void ReadPacket();
   bool ParseAVCDecoderConfigurationRecord(uint8_t* data, int size);
-
+  static int InterruptCB(void* opaque);
+  bool IsIOTimeout();
+  void UpdateIOTime();
+  const static uint32_t kDefaultIOTimeout = 10 * 1000; // 10s.
   AVFormatContext* stream_context_{nullptr};
   std::string url_;
   int video_index_{-1};
   int audio_index_{-1};
+  int64_t last_io_time_{-1};
   std::string sps_;
   std::string pps_;
   std::mutex observers_mutex_;

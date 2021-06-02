@@ -1,10 +1,38 @@
 #include "media_source.h"
 
 #include "byte_buffer.h"
+#include "utils.h"
 #include "spdlog/spdlog.h"
+
+bool MediaSource::IsIOTimeout() {
+  int64_t io_time = TimeMillis() - last_io_time_;
+  return !closed_ ? io_time > kDefaultIOTimeout : true;
+}
+
+void MediaSource::UpdateIOTime() {
+  last_io_time_ = TimeMillis();
+}
+
+int MediaSource::InterruptCB(void* opaque) {
+  if (opaque) {
+    bool timeout = static_cast<MediaSource*>(opaque)->IsIOTimeout();
+    if (timeout)
+      spdlog::debug("Detect io timeout.");
+    return timeout;
+  } 
+  else {
+    return false;
+  }
+}
 
 bool MediaSource::Open(boost::string_view url) {
   int ret = -1;
+  stream_context_ = avformat_alloc_context();
+  if (!stream_context_)
+    return false;
+  stream_context_->interrupt_callback.callback = &MediaSource::InterruptCB;
+  stream_context_->interrupt_callback.opaque = this;
+  UpdateIOTime();
   ret = avformat_open_input(&stream_context_, url.data(), nullptr, nullptr);
 
   if (ret < 0) {
@@ -12,6 +40,7 @@ bool MediaSource::Open(boost::string_view url) {
     return false;
   }
 
+  UpdateIOTime();
   ret = avformat_find_stream_info(stream_context_, nullptr);
 
   if (ret < 0) {
@@ -146,6 +175,7 @@ void MediaSource::ReadPacket() {
   AVPacket packet;
 
   while (!closed_) {
+    UpdateIOTime();
     if (av_read_frame(stream_context_, &packet) < 0) {
       std::lock_guard<std::mutex> guard(observers_mutex_);
       for (auto observer : observers_)
