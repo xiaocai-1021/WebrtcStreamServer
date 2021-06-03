@@ -13,7 +13,7 @@ class Timer {
   };
 
  public:
-  explicit Timer(boost::asio::io_context& io_context, Listener* listener);
+  Timer(boost::asio::io_context& io_context, Listener* listener);
   Timer& operator=(const Timer&) = delete;
   Timer(const Timer&) = delete;
   ~Timer();
