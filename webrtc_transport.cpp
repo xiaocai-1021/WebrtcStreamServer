@@ -4,6 +4,7 @@
 #include "sdptransform/sdptransform.hpp"
 #include "dtls_context.h"
 #include "media_source_manager.h"
+#include "webrtc_transport_manager.h"
 #include "server_config.h"
 #include "stun_message.h"
 
@@ -27,9 +28,7 @@ void WebrtcTransport::OnMediaPacketGenerated(MediaPacket::Pointer packet) {
 }
 
 void WebrtcTransport::OnMediaSouceEnd() {
-  latch_.wait();
-  if (observer_)
-    observer_->OnWebrtcTransportShutdown(shared_from_this());
+  Shutdown();
 }
 
 bool WebrtcTransport::Start() {
@@ -50,14 +49,6 @@ bool WebrtcTransport::Start() {
     work_thread_ =
         std::thread(boost::bind(&boost::asio::io_context::run, &message_loop_));
   return true;
-}
-
-void WebrtcTransport::RegisterObserver(Observer* observer) {
-  observer_ = observer;
-}
-
-void WebrtcTransport::DeregisterObserver() {
-  observer_ = nullptr;
 }
 
 WebrtcTransport::~WebrtcTransport() {
@@ -475,9 +466,7 @@ void WebrtcTransport::OnUdpSocketDataReceive(uint8_t* data,
 
 void WebrtcTransport::OnUdpSocketError() {
   spdlog::error("Udp socket error.");
-  latch_.try_count_down();
-  if (observer_)
-    observer_->OnWebrtcTransportShutdown(shared_from_this());
+  Shutdown();
 }
 
 void WebrtcTransport::OnStunMessageSend(uint8_t* data,
@@ -499,9 +488,7 @@ void WebrtcTransport::OnIceConnectionCompleted() {
 
 void WebrtcTransport::OnIceConnectionError() {
   spdlog::error("Ice connection error occurred.");
-  latch_.try_count_down();
-  if (observer_)
-    observer_->OnWebrtcTransportShutdown(shared_from_this());
+  Shutdown();
 }
 
 void WebrtcTransport::OnDtlsTransportSendData(const uint8_t* data, size_t len) {
@@ -526,14 +513,15 @@ void WebrtcTransport::OnDtlsTransportSetup(SrtpSession::CipherSuite suite,
 
 void WebrtcTransport::OnDtlsTransportError() {
   spdlog::error("Dtls setup error.");
-  latch_.try_count_down();
-  if (observer_)
-    observer_->OnWebrtcTransportShutdown(shared_from_this());
+  Shutdown();
 }
 
 void WebrtcTransport::OnDtlsTransportShutdown() {
   spdlog::debug("Dtls is shutdown.");
+  Shutdown();
+}
+
+void WebrtcTransport::Shutdown() {
   latch_.try_count_down();
-  if (observer_)
-    observer_->OnWebrtcTransportShutdown(shared_from_this());
+  WebrtcTransportManager::GetInstance().Remove(shared_from_this());
 }

@@ -22,18 +22,11 @@ class WebrtcTransport : public std::enable_shared_from_this<WebrtcTransport>,
                         public RtpSession::Observer,
                         public MediaSource::Observer {
  public:
-  class Observer {
-   public:
-    virtual void OnWebrtcTransportShutdown(
-        std::shared_ptr<WebrtcTransport> webrtc_transport) = 0;
-  };
   WebrtcTransport(const std::string& stream_id);
   ~WebrtcTransport();
 
   std::string CreateAnswer();
   bool SetOffer(const std::string& offer);
-  void RegisterObserver(Observer* observer);
-  void DeregisterObserver();
   bool Start();
   void Stop();
 
@@ -62,6 +55,7 @@ class WebrtcTransport : public std::enable_shared_from_this<WebrtcTransport>,
   void OnIncomingOpusPacket(MediaPacket::Pointer packet);
   void OnMediaPacketGenerated(MediaPacket::Pointer packet) override;
   void OnMediaSouceEnd() override;
+  void Shutdown();
 
   std::unique_ptr<SrtpSession> send_srtp_session_;
   std::unique_ptr<SrtpSession> recv_srtp_session_;
@@ -76,7 +70,6 @@ class WebrtcTransport : public std::enable_shared_from_this<WebrtcTransport>,
   std::unique_ptr<RtpSession> rtp_session_;
   boost::asio::io_context message_loop_;
   std::thread work_thread_;
-  Observer* observer_{nullptr};
   int32_t rtp_h264_payload_{-1};
   int32_t rtp_h264_rtx_payload_{-1};
   std::string ice_ufrag_;
