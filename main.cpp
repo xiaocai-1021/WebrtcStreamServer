@@ -45,6 +45,7 @@ int main(int argc, char* argv[]) {
   if (!server->Start(ServerConfig::GetInstance().GetIp(),
                      ServerConfig::GetInstance().GetSignalingServerPort())) {
     spdlog::error("Signaling server failed to start.");
+    WebrtcTransportManager::GetInstance().Stop();
     return EXIT_FAILURE;
   }
 
