@@ -1,9 +1,6 @@
 #pragma once
 
-#include <atomic>
-#include <condition_variable>
 #include <memory>
-#include <mutex>
 #include <thread>
 #include <unordered_set>
 #include <boost/asio.hpp>
