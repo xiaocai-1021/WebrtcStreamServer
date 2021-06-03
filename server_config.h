@@ -11,10 +11,14 @@ class ServerConfig {
   const std::string& GetIp() const;
   const std::string& GetAnnouncedIp() const;
   uint16_t GetSignalingServerPort() const;
+  uint16_t GetWebRtcMaxPort() const;
+  uint16_t GetWebRtcMinPort() const;
 
  private:
   ServerConfig() = default;
   std::string ip_;
   std::string announced_ip_;
   uint16_t signaling_server_port_;
+  uint16_t webrtc_max_port_;
+  uint16_t webrtc_min_port_;
 };

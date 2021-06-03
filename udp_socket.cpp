@@ -1,4 +1,5 @@
 #include "udp_socket.h"
+#include "spdlog/spdlog.h"
 
 #include <assert.h>
 
@@ -8,18 +9,34 @@ UdpSocket::UdpSocket(boost::asio::io_context& io_context,
     : io_context_(io_context),
       is_closing_(false),
       listener_(listener),
+      max_port_(65535),
+      min_port_(0),
       init_receive_buffer_size_(init_receive_buffer_size) {}
 
 UdpSocket::~UdpSocket() {
   Close();
 }
 
-void UdpSocket::ListenTo(boost::string_view ip, uint32_t port) {
-  socket_.reset(new udp::socket(
-      io_context_,
-      udp::endpoint(boost::asio::ip::address::from_string(ip.data()), port)));
+bool UdpSocket::Listen(boost::string_view ip) {
+  for (uint16_t i = min_port_; i <= max_port_; ++i) {
+    try {
+      socket_.reset(new udp::socket(
+          io_context_,
+          udp::endpoint(boost::asio::ip::address::from_string(ip.data()), i)));
+      spdlog::debug("Select port {}.", i);
+      break;
+    }
+    catch(...) {
+      continue;
+    }
+  }
 
-  StartReceive();
+  if (socket_)
+    StartReceive();
+
+  if (socket_ == nullptr)
+    spdlog::error("There are no ports available.");
+  return socket_ != nullptr;
 }
 
 void UdpSocket::SendData(const uint8_t* buf, size_t len, udp::endpoint* endpoint) {
@@ -109,4 +126,9 @@ void UdpSocket::HandleReceive(const boost::system::error_code& ec,
     if (listener_)
       listener_->OnUdpSocketError();
   }
+}
+
+void UdpSocket::SetMinMaxPort(uint16_t min, uint16_t max) {
+  min_port_ = min;
+  max_port_ = max;
 }

@@ -24,6 +24,8 @@ bool ServerConfig::Load(boost::string_view json_file_name) {
     ip_ = json["ip"];
     announced_ip_ = json["announced_ip"];
     signaling_server_port_ = json["signaling_server_port"];
+    webrtc_min_port_ = json["webrtc_min_port"];
+    webrtc_max_port_ = json["webrtc_max_port"];
   } catch (...) {
     spdlog::error("Parse config file failed.");
     return false;
@@ -42,4 +44,12 @@ const std::string& ServerConfig::GetAnnouncedIp() const {
 
 uint16_t ServerConfig::GetSignalingServerPort() const {
   return signaling_server_port_;
+}
+
+uint16_t ServerConfig::GetWebRtcMaxPort() const {
+  return webrtc_max_port_;
+}
+
+uint16_t ServerConfig::GetWebRtcMinPort() const {
+  return webrtc_min_port_;
 }

@@ -29,7 +29,9 @@ class UdpSocket {
   UdpSocket& operator=(const UdpSocket&) = delete;
   UdpSocket(const UdpSocket&) = delete;
   ~UdpSocket();
-  void ListenTo(boost::string_view ip, uint32_t port);
+
+  void SetMinMaxPort(uint16_t min, uint16_t max);
+  bool Listen(boost::string_view ip);
   void SendData(const uint8_t*, size_t len, udp::endpoint* endpoint);
   unsigned short GetListeningPort();
   void Close();
@@ -53,4 +55,6 @@ class UdpSocket {
   UdpMessage receive_data_;
   std::queue<UdpMessage> send_queue_;
   boost::asio::io_context& io_context_;
+  uint16_t max_port_;
+  uint16_t min_port_;
 };

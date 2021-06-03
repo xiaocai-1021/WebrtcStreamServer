@@ -34,7 +34,10 @@ void WebrtcTransport::OnMediaSouceEnd() {
 
 bool WebrtcTransport::Start() {
   udp_socket_.reset(new UdpSocket(message_loop_, this, 5000));
-  udp_socket_->ListenTo(ServerConfig::GetInstance().GetIp(), 0);
+  udp_socket_->SetMinMaxPort(ServerConfig::GetInstance().GetWebRtcMinPort()
+    , ServerConfig::GetInstance().GetWebRtcMaxPort());
+  if (!udp_socket_->Listen(ServerConfig::GetInstance().GetIp()))
+    return false;
   ice_lite_.reset(new IceLite(ice_ufrag_, this));
   send_srtp_session_.reset(new SrtpSession());
   recv_srtp_session_.reset(new SrtpSession());
