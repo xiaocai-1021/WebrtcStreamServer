@@ -13,10 +13,8 @@ std::string Random::RandomString(size_t length) {
   std::string random_string;
   random_string.reserve(length);
 
-  std::uniform_int_distribution<> dist(0, characters_.size() - 1);
-
   for (std::size_t i = 0; i < length; ++i) {
-    random_string += characters_[dist(engine_)];
+    random_string += characters_[RandomUInt(0, characters_.size() - 1)];
   }
 
   return random_string;
