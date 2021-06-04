@@ -52,7 +52,7 @@ void SignalingServer::OnAccept(boost::system::error_code ec,
   if (ec) {
     spdlog::error("Signaling server accept failed. ec = {}", ec.message());
   } else {
-    std::make_shared<SignalingSession>(std::move(socket))->run();
+    std::make_shared<SignalingSession>(std::move(socket))->Run();
   }
 
   DoAccept();
