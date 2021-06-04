@@ -27,6 +27,8 @@ int MediaSource::InterruptCB(void* opaque) {
 
 bool MediaSource::Open(boost::string_view url) {
   int ret = -1;
+  if (!url.starts_with("rtmp://"))
+    return false;
   stream_context_ = avformat_alloc_context();
   if (!stream_context_)
     return false;
