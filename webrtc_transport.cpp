@@ -53,7 +53,8 @@ bool WebrtcTransport::Start() {
 
 WebrtcTransport::~WebrtcTransport() {
   auto media_source = MediaSourceManager::GetInstance().Query(stream_id_);
-  media_source->DeregisterObserver(this);
+  if (media_source)
+    media_source->DeregisterObserver(this);
   spdlog::debug("Call WebrtcTransport's destructor.");
 }
 
