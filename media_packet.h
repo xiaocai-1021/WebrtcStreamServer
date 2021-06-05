@@ -26,11 +26,8 @@ class MediaPacket {
   void PacketType(enum Type type);
   int64_t TimestampMillis() const;
   bool IsKey() const;
-  void SetSideData(std::vector<std::string>& side_data);
-  std::vector<std::string> GetSideData();
 
  private:
   Type type_;
-  std::vector<std::string> side_data_;
   AVPacket packet_;
 };

@@ -36,7 +36,6 @@ class MediaSource {
 
  private:
   void ReadPacket();
-  bool ParseAVCDecoderConfigurationRecord(uint8_t* data, int size);
   static int InterruptCB(void* opaque);
   bool IsIOTimeout();
   void UpdateIOTime();
@@ -47,8 +46,6 @@ class MediaSource {
   int video_index_{-1};
   int audio_index_{-1};
   int64_t last_io_time_{-1};
-  std::string sps_;
-  std::string pps_;
   std::mutex observers_mutex_;
   std::list<Observer*> observers_;
   bool is_first_packet_{true};

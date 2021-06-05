@@ -31,11 +31,3 @@ int64_t MediaPacket::TimestampMillis() const {
 bool MediaPacket::IsKey() const {
   return packet_.flags & AV_PKT_FLAG_KEY;
 }
-
-void MediaPacket::SetSideData(std::vector<std::string>& side_data) {
-  side_data_ = side_data;
-}
-
-std::vector<std::string> MediaPacket::GetSideData() {
-  return side_data_;
-}

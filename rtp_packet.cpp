@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "byte_buffer.h"
+#include "utils.h"
 
 const uint8_t kNalTypeMask = 0x1F;
 const uint8_t kStapA = 24;
@@ -69,9 +70,6 @@ void H264RtpPacketizer::Pack(MediaPacket::Pointer packet) {
 
   frame_end_marker_ = 0;
   for (int i = 0; i < nalus.size(); ++i) {
-    if ((*nalus[i].first & 0x1F) == 5)
-      PackStapA(packet->GetSideData(), timestamp);
-
     if (nalus.size() - i == 1)
       frame_end_marker_ = 1;
     if (nalus[i].second <= kMaxRtpPayloadSize) {

@@ -63,12 +63,6 @@ bool MediaSource::Open(boost::string_view url) {
         return false;
       }
       video_index_ = i;
-      uint8_t* data = stream_context_->streams[i]->codecpar->extradata;
-      int size = stream_context_->streams[i]->codecpar->extradata_size;
-      if (!ParseAVCDecoderConfigurationRecord(data, size)) {
-        spdlog::error("Failed to parse information extradata");
-        return false;
-      }
     }
     if (codec_parameters->codec_type == AVMEDIA_TYPE_AUDIO) {
       audio_index_ = i;
@@ -80,7 +74,7 @@ bool MediaSource::Open(boost::string_view url) {
     return false;
   }
 
-  if (av_bsf_list_parse_str("h264_mp4toannexb", &bit_stream_filter_) < 0)
+  if (av_bsf_list_parse_str("h264_mp4toannexb,dump_extra=freq=keyframe", &bit_stream_filter_) < 0)
     return false;
 
   if (avcodec_parameters_copy(bit_stream_filter_->par_in
@@ -112,71 +106,6 @@ void MediaSource::DeregisterObserver(Observer* observer) {
   if (result == observers_.end())
     return;
   observers_.erase(result);
-}
-
-bool MediaSource::ParseAVCDecoderConfigurationRecord(uint8_t* data, int size) {
-  uint8_t version;
-  uint8_t profile_indication;
-  uint8_t profile_compatibility;
-  uint8_t avc_level;
-  uint8_t length_size;
-
-  std::vector<std::string> sps_list;
-  std::vector<std::string> pps_list;
-
-  ByteReader reader(data, size);
-
-  if (!(reader.ReadUInt8(&version) && version == 1 &&
-        reader.ReadUInt8(&profile_indication) &&
-        reader.ReadUInt8(&profile_compatibility) &&
-        reader.ReadUInt8(&avc_level))) {
-    return false;
-  }
-
-  uint8_t length_size_minus_one;
-  if (!reader.ReadUInt8(&length_size_minus_one))
-    return false;
-  length_size = (length_size_minus_one & 0x3) + 1;
-
-  if (length_size == 3)  // Only values of 1, 2, and 4 are valid.
-    return false;
-
-  uint8_t num_sps;
-  if (!reader.ReadUInt8(&num_sps))
-    return false;
-  num_sps &= 0x1f;
-
-  for (int i = 0; i < num_sps; i++) {
-    uint16_t sps_length;
-    std::string sps;
-
-    if (!reader.ReadUInt16(&sps_length))
-      return false;
-    if (!reader.ReadString(&sps, sps_length))
-      return false;
-    sps_list.push_back(sps);
-  }
-
-  uint8_t num_pps;
-  if (!reader.ReadUInt8(&num_pps))
-    return false;
-  for (int i = 0; i < num_pps; i++) {
-    uint16_t pps_length;
-    std::string pps;
-
-    if (!reader.ReadUInt16(&pps_length))
-      return false;
-    if (!reader.ReadString(&pps, pps_length))
-      return false;
-    pps_list.push_back(pps);
-  }
-
-  if (!sps_list.empty())
-    sps_ = sps_list[0];
-  if (!pps_list.empty())
-    pps_ = pps_list[0];
-
-  return true;
 }
 
 void MediaSource::Stop() {
@@ -232,9 +161,6 @@ void MediaSource::ReadPacket() {
       auto p = std::make_shared<MediaPacket>(&packet);
       p->PacketType(MediaPacket::Type::kVideo);
       std::vector<std::string> packet_side_data;
-      packet_side_data.push_back(sps_);
-      packet_side_data.push_back(pps_);
-      p->SetSideData(packet_side_data);
       std::lock_guard<std::mutex> guard(observers_mutex_);
       for (auto observer : observers_)
         observer->OnMediaPacketGenerated(p);
