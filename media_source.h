@@ -48,9 +48,7 @@ class MediaSource {
   int64_t last_io_time_{-1};
   std::mutex observers_mutex_;
   std::list<Observer*> observers_;
-  bool is_first_packet_{true};
   bool is_first_audio_packet_{true};
-  int64_t first_packet_timestamp_ms_{0};
   int64_t first_audio_packet_timestamp_ms_{0};
   std::thread work_thread_;
   std::atomic<bool> closed_{false};

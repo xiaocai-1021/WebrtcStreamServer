@@ -139,11 +139,6 @@ void MediaSource::ReadPacket() {
       return;
     }
 
-    if (is_first_packet_) {
-      first_packet_timestamp_ms_ = packet.pts;
-      is_first_packet_ = false;
-    }
-
     if (packet.stream_index == video_index_) {
       if (bit_stream_filter_) {
         if (av_bsf_send_packet(bit_stream_filter_, &packet) < 0) {
@@ -157,10 +152,8 @@ void MediaSource::ReadPacket() {
         }
       }
 
-      packet.pts = packet.pts - first_packet_timestamp_ms_;
       auto p = std::make_shared<MediaPacket>(&packet);
       p->PacketType(MediaPacket::Type::kVideo);
-      std::vector<std::string> packet_side_data;
       std::lock_guard<std::mutex> guard(observers_mutex_);
       for (auto observer : observers_)
         observer->OnMediaPacketGenerated(p);
@@ -175,8 +168,7 @@ void MediaSource::ReadPacket() {
             stream_context_->streams[audio_index_]->codecpar);
         opus_transcoder_->RegisterTranscodeCallback([&](AVPacket* pkt) {
           if (pkt) {
-            pkt->pts +=
-                first_audio_packet_timestamp_ms_ - first_packet_timestamp_ms_;
+            pkt->pts += first_audio_packet_timestamp_ms_;
             pkt->dts = pkt->pts;
           }
           auto p = std::make_shared<MediaPacket>(pkt);
