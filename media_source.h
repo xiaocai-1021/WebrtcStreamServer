@@ -40,6 +40,7 @@ class MediaSource {
   static int InterruptCB(void* opaque);
   bool IsIOTimeout();
   void UpdateIOTime();
+  void StreamEnd();
   const static int64_t kDefaultIOTimeoutMillis = 10 * 1000; // 10s.
   AVFormatContext* stream_context_{nullptr};
   std::string url_;
@@ -57,4 +58,5 @@ class MediaSource {
   std::thread work_thread_;
   std::atomic<bool> closed_{false};
   std::unique_ptr<OpusTranscoder> opus_transcoder_;
+  AVBSFContext* bit_stream_filter_{nullptr};
 };

@@ -124,8 +124,12 @@ class H264RtpPacketizer : public RtpPacketizer {
   void Pack(MediaPacket::Pointer packet) override;
 
  private:
-  void PackSingNalu(uint8_t* data, int size, uint32_t timestamp);
-  void PackFuA(uint8_t* data, int size, uint32_t timestamp);
+  using NaluStart = const uint8_t*;
+  using NaluLength = size_t;
+  using NaluePosition = std::pair<NaluStart, NaluLength>;
+  std::vector<NaluePosition> ParseNaluPositions(const uint8_t* buffer, size_t buffer_size);
+  void PackSingNalu(const uint8_t* data, int size, uint32_t timestamp);
+  void PackFuA(const uint8_t* data, int size, uint32_t timestamp);
   void PackStapA(std::vector<std::string> nalus, int64_t timestamp);
   uint8_t frame_end_marker_{0};
 };

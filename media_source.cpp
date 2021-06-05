@@ -29,6 +29,11 @@ bool MediaSource::Open(boost::string_view url) {
   int ret = -1;
   if (!url.starts_with("rtmp://"))
     return false;
+
+  ScopeGuard guard([this] {
+    Stop();
+  });
+
   stream_context_ = avformat_alloc_context();
   if (!stream_context_)
     return false;
@@ -47,7 +52,6 @@ bool MediaSource::Open(boost::string_view url) {
 
   if (ret < 0) {
     spdlog::error("Failed to find stream information.");
-    avformat_close_input(&stream_context_);
     return false;
   }
 
@@ -56,7 +60,6 @@ bool MediaSource::Open(boost::string_view url) {
     if (codec_parameters->codec_type == AVMEDIA_TYPE_VIDEO) {
       if (codec_parameters->codec_id != AV_CODEC_ID_H264) {
         spdlog::error("Only H264 codec is supported.");
-        avformat_close_input(&stream_context_);
         return false;
       }
       video_index_ = i;
@@ -64,7 +67,6 @@ bool MediaSource::Open(boost::string_view url) {
       int size = stream_context_->streams[i]->codecpar->extradata_size;
       if (!ParseAVCDecoderConfigurationRecord(data, size)) {
         spdlog::error("Failed to parse information extradata");
-        avformat_close_input(&stream_context_);
         return false;
       }
     }
@@ -75,12 +77,20 @@ bool MediaSource::Open(boost::string_view url) {
 
   if (video_index_ == -1 || audio_index_ == -1) {
     spdlog::error("Now only streams with audio and video are supported.");
-    avformat_close_input(&stream_context_);
     return false;
   }
 
-  url_ = url.data();
+  if (av_bsf_list_parse_str("h264_mp4toannexb", &bit_stream_filter_) < 0)
+    return false;
 
+  if (avcodec_parameters_copy(bit_stream_filter_->par_in
+    , stream_context_->streams[video_index_]->codecpar) < 0)
+    return false;
+  if (av_bsf_init(bit_stream_filter_) < 0)
+    return false;
+
+  url_ = url.data();
+  guard.Dismiss();
   return true;
 }
 
@@ -176,10 +186,18 @@ void MediaSource::Stop() {
 
   if (stream_context_)
     avformat_close_input(&stream_context_);
+  if (bit_stream_filter_)
+    av_bsf_free(&bit_stream_filter_);
 }
 
 void MediaSource::Start() {
   work_thread_ = std::thread(&MediaSource::ReadPacket, this);
+}
+
+void MediaSource::StreamEnd() {
+  std::lock_guard<std::mutex> guard(observers_mutex_);
+  for (auto observer : observers_)
+    observer->OnMediaSouceEnd();
 }
 
 void MediaSource::ReadPacket() {
@@ -188,9 +206,7 @@ void MediaSource::ReadPacket() {
   while (!closed_) {
     UpdateIOTime();
     if (av_read_frame(stream_context_, &packet) < 0) {
-      std::lock_guard<std::mutex> guard(observers_mutex_);
-      for (auto observer : observers_)
-        observer->OnMediaSouceEnd();
+      StreamEnd();
       return;
     }
 
@@ -200,6 +216,18 @@ void MediaSource::ReadPacket() {
     }
 
     if (packet.stream_index == video_index_) {
+      if (bit_stream_filter_) {
+        if (av_bsf_send_packet(bit_stream_filter_, &packet) < 0) {
+          StreamEnd();
+          return;
+        }
+
+        if (av_bsf_receive_packet(bit_stream_filter_, &packet) < 0) {
+          StreamEnd();
+          return;
+        }
+      }
+
       packet.pts = packet.pts - first_packet_timestamp_ms_;
       auto p = std::make_shared<MediaPacket>(&packet);
       p->PacketType(MediaPacket::Type::kVideo);

@@ -1,6 +1,7 @@
 #include "rtp_packet.h"
 
 #include <cassert>
+#include <iostream>
 
 #include "byte_buffer.h"
 
@@ -62,23 +63,10 @@ H264RtpPacketizer::H264RtpPacketizer(uint32_t ssrc,
     : RtpPacketizer{ssrc, payload_type, clock_rate, listener} {}
 
 void H264RtpPacketizer::Pack(MediaPacket::Pointer packet) {
-  uint32_t nal_len = 0;
-  uint32_t read_len = 0;
-  bool is_key = false;
-  using NaluStart = uint8_t*;
-  using NaluLength = uint32_t;
-  using NaluePosition = std::pair<NaluStart, NaluLength>;
   std::vector<NaluePosition> nalus;
   uint32_t timestamp = (double)packet->TimestampMillis() / 1000 * clock_rate_;
+  nalus = ParseNaluPositions(packet->Data(), packet->Size());
 
-  while (read_len < packet->Size()) {
-    nal_len = LoadUInt32BE(packet->Data() + read_len);
-    read_len += 4;
-    nalus.push_back(std::make_pair(packet->Data() + read_len, nal_len));
-    read_len += nal_len;
-  }
-
-  assert(read_len == packet->Size());
   frame_end_marker_ = 0;
   for (int i = 0; i < nalus.size(); ++i) {
     if ((*nalus[i].first & 0x1F) == 5)
@@ -132,7 +120,7 @@ void H264RtpPacketizer::PackStapA(std::vector<std::string> nalus,
   }
 }
 
-void H264RtpPacketizer::PackSingNalu(uint8_t* data,
+void H264RtpPacketizer::PackSingNalu(const uint8_t* data,
                                      int size,
                                      uint32_t timestamp) {
   uint8_t* p = rtp_buf_;
@@ -156,7 +144,7 @@ void H264RtpPacketizer::PackSingNalu(uint8_t* data,
   }
 }
 
-void H264RtpPacketizer::PackFuA(uint8_t* data, int size, uint32_t timestamp) {
+void H264RtpPacketizer::PackFuA(const uint8_t* data, int size, uint32_t timestamp) {
   bool start = true;
   bool end = false;
   uint8_t nalu_header = data[0];
@@ -210,6 +198,45 @@ void H264RtpPacketizer::PackFuA(uint8_t* data, int size, uint32_t timestamp) {
     size -= data_len;
   }
   assert(size == 0);
+}
+
+std::vector<H264RtpPacketizer::NaluePosition> H264RtpPacketizer::ParseNaluPositions(const uint8_t* buffer, size_t buffer_size) {
+  std::vector<NaluePosition> sequences;
+  if (buffer_size < 3)
+    return sequences;
+
+  const size_t end = buffer_size - 3;
+  for (size_t i = 0; i < end;) {
+    if (buffer[i + 2] > 1) {
+      i += 3;
+    } else if (buffer[i + 2] == 1) {
+      if (buffer[i + 1] == 0 && buffer[i] == 0) {
+        // We found a start sequence, now check if it was a 3 of 4 byte one.
+        NaluePosition index = std::make_pair<NaluStart, NaluLength>(buffer + i + 3, 0);
+        size_t start_offset = i;
+        if (start_offset > 0 && buffer[start_offset - 1] == 0)
+          --start_offset;
+
+        // Update length of previous entry.
+        auto it = sequences.rbegin();
+        if (it != sequences.rend())
+          it->second = start_offset - (it->first - buffer);
+
+        sequences.push_back(index);
+      }
+
+      i += 3;
+    } else {
+      ++i;
+    }
+  }
+
+  // Update length of last entry, if any.
+  auto it = sequences.rbegin();
+  if (it != sequences.rend())
+    it->second = buffer_size - (it->first - buffer);
+
+  return sequences;
 }
 
 OpusRtpPacketizer::OpusRtpPacketizer(uint32_t ssrc,
