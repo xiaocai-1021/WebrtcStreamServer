@@ -1,11 +1,20 @@
 #include "utils.h"
 
 #include <chrono>
+#include <iterator>
+#include <boost/utility/string_view.hpp>
+#include "spdlog/spdlog.h"
+#include "spdlog/fmt/bin_to_hex.h"
 
 int64_t TimeMillis() {
   return std::chrono::duration_cast<std::chrono::milliseconds>(
              std::chrono::steady_clock::now().time_since_epoch())
       .count();
+}
+
+void DumpHex(const uint8_t* data, size_t size) {
+  boost::string_view str((char*)data, size);
+  spdlog::debug("{:n}", spdlog::to_hex(str));
 }
 
 NtpTime NtpTime::CreateFromMillis(uint64_t millis) {

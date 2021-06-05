@@ -4,8 +4,11 @@
 #include <cstdint>
 #include <memory>
 #include <functional>
+#include <cstddef>
 
 int64_t TimeMillis();
+
+void DumpHex(const uint8_t* data, size_t size);
 
 class NtpTime {
  public:
