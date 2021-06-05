@@ -47,6 +47,7 @@ bool MediaSource::Open(boost::string_view url) {
 
   if (ret < 0) {
     spdlog::error("Failed to find stream information.");
+    avformat_close_input(&stream_context_);
     return false;
   }
 
@@ -55,6 +56,7 @@ bool MediaSource::Open(boost::string_view url) {
     if (codec_parameters->codec_type == AVMEDIA_TYPE_VIDEO) {
       if (codec_parameters->codec_id != AV_CODEC_ID_H264) {
         spdlog::error("Only H264 codec is supported.");
+        avformat_close_input(&stream_context_);
         return false;
       }
       video_index_ = i;
@@ -62,12 +64,19 @@ bool MediaSource::Open(boost::string_view url) {
       int size = stream_context_->streams[i]->codecpar->extradata_size;
       if (!ParseAVCDecoderConfigurationRecord(data, size)) {
         spdlog::error("Failed to parse information extradata");
+        avformat_close_input(&stream_context_);
         return false;
       }
     }
     if (codec_parameters->codec_type == AVMEDIA_TYPE_AUDIO) {
       audio_index_ = i;
     }
+  }
+
+  if (video_index_ == -1 || audio_index_ == -1) {
+    spdlog::error("Now only streams with audio and video are supported.");
+    avformat_close_input(&stream_context_);
+    return false;
   }
 
   url_ = url.data();
