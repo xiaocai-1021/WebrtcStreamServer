@@ -41,3 +41,14 @@ uint32_t NtpTime::Fractions() const {
 uint32_t NtpTime::ToCompactNtp() {
   return (seconds_ << 16) | (fractions_ >> 16);
 }
+
+ScopeGuard::ScopeGuard(const std::function<void()>& f)
+    : func_(f), dismiss_(false) {}
+
+ScopeGuard::~ScopeGuard() {
+  if (!dismiss_ && func_) func_();
+}
+
+void ScopeGuard::Dismiss() {
+  dismiss_ = true;
+}

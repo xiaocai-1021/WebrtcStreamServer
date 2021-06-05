@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdint>
 #include <memory>
+#include <functional>
 
 int64_t TimeMillis();
 
@@ -22,4 +23,17 @@ class NtpTime {
   static constexpr uint64_t kFractionsPerSecond = 1ULL << 32;
   uint32_t seconds_;
   uint32_t fractions_;
+};
+
+class ScopeGuard {
+ public:
+  explicit ScopeGuard(const std::function<void()>& f);
+
+  ~ScopeGuard();
+
+  void Dismiss();
+
+ private:
+  std::function<void()> func_;
+  bool dismiss_;
 };
