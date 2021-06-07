@@ -2,8 +2,9 @@
 
 static const uint32_t kOutSampleRate = 48000;
 static const uint32_t kOutChannels = 2;
-static constexpr uint32_t kFrameSize = 960;  // 20ms
-static const uint32_t kSampleSize = 2;       // pcm16le
+static constexpr uint32_t kFrameSize = 960; // 20ms
+static const uint32_t kSampleSize = 2; // pcm16le
+static const uint32_t kOpusDefaultComplexity = 10; // range 1~10
 
 OpusTranscoder::OpusTranscoder() {
   for (int i = 0; i < 8; ++i)
@@ -194,6 +195,8 @@ bool OpusTranscoder::InitEncoder() {
     spdlog::error("Error create Opus encoder");
     return false;
   }
+
+  opus_encoder_ctl(opus_, OPUS_SET_COMPLEXITY(kOpusDefaultComplexity));
   opus_encoder_ctl(opus_, OPUS_SET_INBAND_FEC(1));
   return true;
 }
