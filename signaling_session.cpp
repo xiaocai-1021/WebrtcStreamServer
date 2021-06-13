@@ -18,8 +18,7 @@ void SignalingSession::HandleRequest() {
       if (media_source) {
         auto webrtc_transport =
             std::make_shared<WebrtcTransport>(json["streamId"]);
-        webrtc_transport->SetOffer(json["offer"]);
-        if (webrtc_transport->Start()) {
+        if (webrtc_transport->SetOffer(json["offer"]) && webrtc_transport->Start()) {
           media_source->RegisterObserver(webrtc_transport.get());
           auto sdp = webrtc_transport->CreateAnswer();
           WebrtcTransportManager::GetInstance().Add(webrtc_transport);
