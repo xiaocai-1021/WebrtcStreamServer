@@ -72,6 +72,7 @@ class WebrtcTransport : public std::enable_shared_from_this<WebrtcTransport>,
   std::thread work_thread_;
   int32_t rtp_h264_payload_{-1};
   int32_t rtp_h264_rtx_payload_{-1};
+  int32_t rtp_opus_payload_{-1};
   std::string ice_ufrag_;
   std::string ice_pwd_;
   std::string fingerprint_type_;
