@@ -143,9 +143,28 @@ install_boost() {
     chmod +x bootstrap.sh
     ./bootstrap.sh
     ./b2 && ./b2 install --prefix=$PREFIX_DIR
+    cd $THIRDPARTY_ROOT_DIR
   else
     mkdir -p $BUILD_LIB_DIR
     install_boost
+  fi
+}
+
+install_toml11() {
+  if [ -d $BUILD_LIB_DIR ]; then
+    cd $BUILD_LIB_DIR
+    wget -O toml11_v3.7.0.zip https://github.com/ToruNiina/toml11/archive/refs/tags/v3.7.0.zip
+    unzip toml11_v3.7.0.zip
+    cd toml11-3.7.0
+    mkdir build
+    cd build
+    cmake -DCMAKE_INSTALL_PREFIX=$PREFIX_DIR ..
+    make
+    make install
+    cd $THIRDPARTY_ROOT_DIR
+  else
+    mkdir -p $BUILD_LIB_DIR
+    install_toml11
   fi
 }
 
@@ -157,3 +176,4 @@ install_libsdptransform
 install_opus
 install_ffmpeg
 install_boost
+install_toml11

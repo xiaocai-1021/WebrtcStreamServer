@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
   spdlog::set_level(spdlog::level::debug);
 #endif
 
-  if (!ServerConfig::GetInstance().Load("../config.json")) {
+  if (!ServerConfig::GetInstance().Load("../config.toml")) {
     spdlog::error("Failed to load config file.");
     return EXIT_FAILURE;
   }

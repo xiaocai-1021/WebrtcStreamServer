@@ -1,8 +1,6 @@
 #include "server_config.h"
 
-#include <fstream>
-
-#include "nlohmann/json.hpp"
+#include "toml.hpp"
 #include "spdlog/spdlog.h"
 
 ServerConfig& ServerConfig::GetInstance() {
@@ -11,21 +9,13 @@ ServerConfig& ServerConfig::GetInstance() {
 }
 
 bool ServerConfig::Load(boost::string_view json_file_name) {
-  std::ifstream config_file(json_file_name.data());
-  if (!config_file.is_open()) {
-    spdlog::error("Open config file {} failed.", json_file_name.data());
-    return false;
-  }
-
   try {
-    nlohmann::json json;
-    config_file >> json;
-
-    ip_ = json["ip"];
-    announced_ip_ = json["announced_ip"];
-    signaling_server_port_ = json["signaling_server_port"];
-    webrtc_min_port_ = json["webrtc_min_port"];
-    webrtc_max_port_ = json["webrtc_max_port"];
+    const auto data = toml::parse(json_file_name.data());
+    ip_ = toml::find<std::string>(data, "ip");
+    announced_ip_ = toml::find<std::string>(data, "announcedIp");
+    signaling_server_port_  = toml::find<uint16_t>(data, "signalingServerPort");
+    webrtc_min_port_ = toml::find<uint16_t>(data, "webrtcMinPort");
+    webrtc_max_port_ = toml::find<uint16_t>(data, "webrtcMaxPort");
   } catch (...) {
     spdlog::error("Parse config file failed.");
     return false;

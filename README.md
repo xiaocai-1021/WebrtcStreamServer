@@ -15,7 +15,7 @@ cmake ..
 make
 
 ## Run
-+ Fill in the configuration file named config.json correctly.
++ Fill in the configuration file named config.toml correctly.
 + ./WebrtcStreamServer
 
 ## How to play stream.

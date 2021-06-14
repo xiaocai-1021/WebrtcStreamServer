@@ -1,0 +1,7 @@
+#Local IP.
+ip = "127.0.0.1"
+#Fill in the public IP. If there is no public IP, fill in the local IP.
+announcedIp = "127.0.0.1"
+signalingServerPort = 8000
+webrtcMinPort = 0
+webrtcMaxPort = 65535
