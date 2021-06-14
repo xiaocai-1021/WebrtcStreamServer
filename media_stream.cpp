@@ -89,12 +89,12 @@ void RtpStoragePacket::SetResendMillisecs(uint64_t millisecs) {
   resent_millisecs_ = millisecs;
 }
 
-RtpStream::RtpStream(const RtpParams& params, Observer* observer)
+StreamTrack::StreamTrack(const RtpParams& params, Observer* observer)
     : params_{params},
       observer_{observer},
       max_resend_delay_in_clock_rate_{params.clock_rate * 2} {}
 
-std::unique_ptr<SenderReportPacket> RtpStream::CreateRtcpSenderReport(
+std::unique_ptr<SenderReportPacket> StreamTrack::CreateRtcpSenderReport(
     uint64_t now_millis) {
   if (send_packet_count_ == 0)
     return nullptr;
@@ -111,7 +111,7 @@ std::unique_ptr<SenderReportPacket> RtpStream::CreateRtcpSenderReport(
   return sr;
 }
 
-void RtpStream::ReceiveReceiverReport(const ReportBlock& report_block) {
+void StreamTrack::ReceiveReceiverReport(const ReportBlock& report_block) {
   uint64_t now = TimeMillis();
   NtpTime ntp = NtpTime::CreateFromMillis(now);
   uint32_t compact_ntp = ntp.ToCompactNtp();
@@ -122,7 +122,7 @@ void RtpStream::ReceiveReceiverReport(const ReportBlock& report_block) {
   }
 }
 
-void RtpStream::ReceiveNack(NackPacket* nack_packet) {
+void StreamTrack::ReceiveNack(NackPacket* nack_packet) {
   if (!nack_packet || nack_packet->GetMediaSsrc() != params_.ssrc ||
       !params_.is_nack_enable_)
     return;
@@ -150,11 +150,11 @@ void RtpStream::ReceiveNack(NackPacket* nack_packet) {
                          params_.rtx_payload_type);
     }
     if (observer_)
-      observer_->OnRtpStreamResendPacket(pkt);
+      observer_->OnStreamTrackResendPacket(pkt);
   }
 }
 
-void RtpStream::ReceivePacket(RtpPacket* pkt) {
+void StreamTrack::ReceivePacket(RtpPacket* pkt) {
   if (!pkt || pkt->GetSsrc() != params_.ssrc)
     return;
   send_packet_count_++;
@@ -176,15 +176,15 @@ MediaStream::MediaStream(boost::asio::io_context& io_context, Observer* observer
   rtcp_timer_->AsyncWait(200);
 }
 
-void MediaStream::AddRtpStream(const RtpStream::RtpParams& params) {
-  if (params.media_type == RtpStream::RtpParams::MediaType::kVideo) {
+void MediaStream::AddStreamTrack(const StreamTrack::RtpParams& params) {
+  if (params.media_type == StreamTrack::RtpParams::MediaType::kVideo) {
     h264_packetizer_ = std::make_unique<H264RtpPacketizer>(
         params.ssrc, params.payload_type, params.clock_rate, this);
-  } else if (params.media_type == RtpStream::RtpParams::MediaType::kAudio) {
+  } else if (params.media_type == StreamTrack::RtpParams::MediaType::kAudio) {
     opus_packetizer_ = std::make_unique<OpusRtpPacketizer>(
         params.ssrc, params.payload_type, params.clock_rate, this);
   }
-  rtp_streams_[params.ssrc] = std::make_unique<RtpStream>(params, this);
+  stream_tracks_[params.ssrc] = std::make_unique<StreamTrack>(params, this);
 }
 
 void MediaStream::ReceiveH264Packet(MediaPacket::Pointer packet) {
@@ -206,7 +206,7 @@ void MediaStream::ReceiveRctp(uint8_t* data, int len) {
     if (p->Type() == kRtcpTypeRtpfb) {
       if (p->Format() == 1) {
         NackPacket* nack_packet = dynamic_cast<NackPacket*>(p);
-        rtp_streams_[nack_packet->GetMediaSsrc()]->ReceiveNack(nack_packet);
+        stream_tracks_[nack_packet->GetMediaSsrc()]->ReceiveNack(nack_packet);
       } else if (p->Format() == 15) {
         // spdlog::debug("twcc .....");
       } else {
@@ -217,8 +217,8 @@ void MediaStream::ReceiveRctp(uint8_t* data, int len) {
       auto report_blocks = rr_packet->GetReportBlocks();
       for (auto block : report_blocks) {
         // When RTX is enabled, the RR packet of RTX is ignored.
-        auto stream_iter = rtp_streams_.find(block.source_ssrc);
-        if (stream_iter != rtp_streams_.end())
+        auto stream_iter = stream_tracks_.find(block.source_ssrc);
+        if (stream_iter != stream_tracks_.end())
           stream_iter->second->ReceiveReceiverReport(block);
       }
     }
@@ -226,10 +226,10 @@ void MediaStream::ReceiveRctp(uint8_t* data, int len) {
 }
 
 void MediaStream::RtpPacketSent(RtpPacket* pkt) {
-  rtp_streams_[pkt->GetSsrc()]->ReceivePacket(pkt);
+  stream_tracks_[pkt->GetSsrc()]->ReceivePacket(pkt);
 }
 
-void MediaStream::OnRtpStreamResendPacket(RtpStoragePacket* pkt) {
+void MediaStream::OnStreamTrackResendPacket(RtpStoragePacket* pkt) {
   observer_->OnRtpPacketSend(pkt->Data(), pkt->Size());
 }
 
@@ -240,7 +240,7 @@ void MediaStream::OnRtpPacketGenerated(RtpPacket* pkt) {
 
 void MediaStream::OnTimerTimeout() {
   auto now_millis = TimeMillis();
-  for (auto iter = rtp_streams_.begin(); iter != rtp_streams_.end(); ++iter) {
+  for (auto iter = stream_tracks_.begin(); iter != stream_tracks_.end(); ++iter) {
     auto sr_packet = iter->second->CreateRtcpSenderReport(now_millis);
     if (!sr_packet)
       continue;

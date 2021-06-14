@@ -50,7 +50,7 @@ class RtpStoragePacket {
   uint32_t header_offset_;
 };
 
-class RtpStream {
+class StreamTrack {
  public:
   static constexpr uint64_t kDefaultRttMillis = 100;
   static constexpr uint32_t kSendBufferCapacity = 1000;
@@ -72,10 +72,10 @@ class RtpStream {
 
   class Observer {
    public:
-    virtual void OnRtpStreamResendPacket(RtpStoragePacket* pkt) = 0;
+    virtual void OnStreamTrackResendPacket(RtpStoragePacket* pkt) = 0;
   };
 
-  RtpStream(const RtpParams& params, Observer* observer);
+  StreamTrack(const RtpParams& params, Observer* observer);
 
   std::unique_ptr<SenderReportPacket> CreateRtcpSenderReport(
       uint64_t now_millis);
@@ -100,7 +100,7 @@ class RtpStream {
   uint16_t rtx_sequence_number_{0};
 };
 
-class MediaStream : public RtpStream::Observer,
+class MediaStream : public StreamTrack::Observer,
                    public Timer::Listener,
                    public RtpPacketizer::Observer {
  public:
@@ -112,7 +112,7 @@ class MediaStream : public RtpStream::Observer,
 
   MediaStream(boost::asio::io_context& io_context, Observer* observer);
 
-  void AddRtpStream(const RtpStream::RtpParams& params);
+  void AddStreamTrack(const StreamTrack::RtpParams& params);
 
   void ReceiveH264Packet(MediaPacket::Pointer packet);
 
@@ -125,14 +125,14 @@ class MediaStream : public RtpStream::Observer,
  private:
   void RtpPacketSent(RtpPacket* pkt);
 
-  void OnRtpStreamResendPacket(RtpStoragePacket* pkt) override;
+  void OnStreamTrackResendPacket(RtpStoragePacket* pkt) override;
 
   void OnRtpPacketGenerated(RtpPacket* pkt) override;
 
   void OnTimerTimeout() override;
 
   boost::asio::io_context& io_context_;
-  std::unordered_map<uint32_t, std::unique_ptr<RtpStream>> rtp_streams_;
+  std::unordered_map<uint32_t, std::unique_ptr<StreamTrack>> stream_tracks_;
   std::unique_ptr<Timer> rtcp_timer_;
   std::unique_ptr<H264RtpPacketizer> h264_packetizer_;
   std::unique_ptr<OpusRtpPacketizer> opus_packetizer_;

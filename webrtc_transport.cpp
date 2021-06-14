@@ -371,7 +371,7 @@ std::string WebrtcTransport::CreateAnswer() {
   }
 
   media_stream_ = std::make_unique<MediaStream>(message_loop_, this);
-  RtpStream::RtpParams video_rtp_params;
+  StreamTrack::RtpParams video_rtp_params;
   video_rtp_params.ssrc = video_h264_ssrc;
   video_rtp_params.clock_rate = 90000;
   video_rtp_params.payload_type = rtp_h264_payload_;
@@ -379,15 +379,15 @@ std::string WebrtcTransport::CreateAnswer() {
   video_rtp_params.rtx_payload_type = rtp_h264_rtx_payload_;
   video_rtp_params.is_rtx_enabled = true;
   video_rtp_params.is_nack_enable_ = true;
-  video_rtp_params.media_type = RtpStream::RtpParams::MediaType::kVideo;
-  media_stream_->AddRtpStream(video_rtp_params);
-  RtpStream::RtpParams audio_rtp_params;
+  video_rtp_params.media_type = StreamTrack::RtpParams::MediaType::kVideo;
+  media_stream_->AddStreamTrack(video_rtp_params);
+  StreamTrack::RtpParams audio_rtp_params;
   audio_rtp_params.ssrc = audio_opus_ssrc;
   audio_rtp_params.clock_rate = 48000;
   audio_rtp_params.payload_type = rtp_opus_payload_;
   audio_rtp_params.is_nack_enable_ = true;
-  audio_rtp_params.media_type = RtpStream::RtpParams::MediaType::kAudio;
-  media_stream_->AddRtpStream(audio_rtp_params);
+  audio_rtp_params.media_type = StreamTrack::RtpParams::MediaType::kAudio;
+  media_stream_->AddStreamTrack(audio_rtp_params);
   return answer;
 }
 
