@@ -63,8 +63,8 @@ void WebrtcTransport::Stop() {
   udp_socket_->Close();
   if (dtls_transport_)
     dtls_transport_->Stop();
-  if (rtp_session_)
-    rtp_session_->Stop();
+  if (media_stream_)
+    media_stream_->Stop();
 
   if (work_thread_.joinable())
     work_thread_.join();
@@ -370,7 +370,7 @@ std::string WebrtcTransport::CreateAnswer() {
     spdlog::error("{}", e.what());
   }
 
-  rtp_session_ = std::make_unique<RtpSession>(message_loop_, this);
+  media_stream_ = std::make_unique<MediaStream>(message_loop_, this);
   RtpStream::RtpParams video_rtp_params;
   video_rtp_params.ssrc = video_h264_ssrc;
   video_rtp_params.clock_rate = 90000;
@@ -380,14 +380,14 @@ std::string WebrtcTransport::CreateAnswer() {
   video_rtp_params.is_rtx_enabled = true;
   video_rtp_params.is_nack_enable_ = true;
   video_rtp_params.media_type = RtpStream::RtpParams::MediaType::kVideo;
-  rtp_session_->AddRtpStream(video_rtp_params);
+  media_stream_->AddRtpStream(video_rtp_params);
   RtpStream::RtpParams audio_rtp_params;
   audio_rtp_params.ssrc = audio_opus_ssrc;
   audio_rtp_params.clock_rate = 48000;
   audio_rtp_params.payload_type = rtp_opus_payload_;
   audio_rtp_params.is_nack_enable_ = true;
   audio_rtp_params.media_type = RtpStream::RtpParams::MediaType::kAudio;
-  rtp_session_->AddRtpStream(audio_rtp_params);
+  media_stream_->AddRtpStream(audio_rtp_params);
   return answer;
 }
 
@@ -418,11 +418,11 @@ void WebrtcTransport::OnRtpPacketSend(uint8_t* data, int size) {
 }
 
 void WebrtcTransport::OnIncomingH264Packet(MediaPacket::Pointer packet) {
-  rtp_session_->ReceiveH264Packet(packet);
+  media_stream_->ReceiveH264Packet(packet);
 }
 
 void WebrtcTransport::OnIncomingOpusPacket(MediaPacket::Pointer packet) {
-  rtp_session_->ReceiveOpusPacket(packet);
+  media_stream_->ReceiveOpusPacket(packet);
 }
 
 void WebrtcTransport::OnUdpSocketDataReceive(uint8_t* data,
@@ -440,7 +440,7 @@ void WebrtcTransport::OnUdpSocketDataReceive(uint8_t* data,
     if (!recv_srtp_session_->UnprotectRtcp(data, len, &length)) {
       spdlog::warn("Failed to unprotect the incoming RTCP packet.");
     }
-    rtp_session_->ReceiveRctp(data, length);
+    media_stream_->ReceiveRctp(data, length);
   } else {
     // TODO.
   }

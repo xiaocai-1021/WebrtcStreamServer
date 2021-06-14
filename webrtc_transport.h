@@ -11,7 +11,7 @@
 #include "ice_lite.h"
 #include "media_packet.h"
 #include "media_source.h"
-#include "rtp_session.h"
+#include "media_stream.h"
 #include "srtp_session.h"
 #include "udp_socket.h"
 
@@ -19,7 +19,7 @@ class WebrtcTransport : public std::enable_shared_from_this<WebrtcTransport>,
                         public UdpSocket::Observer,
                         public IceLite::Observer,
                         public DtlsTransport::Observer,
-                        public RtpSession::Observer,
+                        public MediaStream::Observer,
                         public MediaSource::Observer {
  public:
   WebrtcTransport(const std::string& stream_id);
@@ -67,7 +67,7 @@ class WebrtcTransport : public std::enable_shared_from_this<WebrtcTransport>,
   char protect_buffer_[65536];
   bool connection_established_;
   bool dtls_ready_{false};
-  std::unique_ptr<RtpSession> rtp_session_;
+  std::unique_ptr<MediaStream> media_stream_;
   boost::asio::io_context message_loop_;
   std::thread work_thread_;
   int32_t rtp_h264_payload_{-1};

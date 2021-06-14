@@ -1,4 +1,4 @@
-#include "rtp_session.h"
+#include "media_stream.h"
 
 #include <arpa/inet.h>
 
@@ -170,13 +170,13 @@ void RtpStream::ReceivePacket(RtpPacket* pkt) {
   }
 }
 
-RtpSession::RtpSession(boost::asio::io_context& io_context, Observer* observer)
+MediaStream::MediaStream(boost::asio::io_context& io_context, Observer* observer)
     : io_context_{io_context}, observer_{observer} {
   rtcp_timer_ = std::make_unique<Timer>(io_context_, this);
   rtcp_timer_->AsyncWait(200);
 }
 
-void RtpSession::AddRtpStream(const RtpStream::RtpParams& params) {
+void MediaStream::AddRtpStream(const RtpStream::RtpParams& params) {
   if (params.media_type == RtpStream::RtpParams::MediaType::kVideo) {
     h264_packetizer_ = std::make_unique<H264RtpPacketizer>(
         params.ssrc, params.payload_type, params.clock_rate, this);
@@ -187,15 +187,15 @@ void RtpSession::AddRtpStream(const RtpStream::RtpParams& params) {
   rtp_streams_[params.ssrc] = std::make_unique<RtpStream>(params, this);
 }
 
-void RtpSession::ReceiveH264Packet(MediaPacket::Pointer packet) {
+void MediaStream::ReceiveH264Packet(MediaPacket::Pointer packet) {
   h264_packetizer_->Pack(packet);
 }
 
-void RtpSession::ReceiveOpusPacket(MediaPacket::Pointer packet) {
+void MediaStream::ReceiveOpusPacket(MediaPacket::Pointer packet) {
   opus_packetizer_->Pack(packet);
 }
 
-void RtpSession::ReceiveRctp(uint8_t* data, int len) {
+void MediaStream::ReceiveRctp(uint8_t* data, int len) {
   RtcpCompound rtcp_compound;
   if (!rtcp_compound.Parse(data, len)) {
     spdlog::warn("Failed to parse compound rtcp.");
@@ -225,20 +225,20 @@ void RtpSession::ReceiveRctp(uint8_t* data, int len) {
   }
 }
 
-void RtpSession::RtpPacketSent(RtpPacket* pkt) {
+void MediaStream::RtpPacketSent(RtpPacket* pkt) {
   rtp_streams_[pkt->GetSsrc()]->ReceivePacket(pkt);
 }
 
-void RtpSession::OnRtpStreamResendPacket(RtpStoragePacket* pkt) {
+void MediaStream::OnRtpStreamResendPacket(RtpStoragePacket* pkt) {
   observer_->OnRtpPacketSend(pkt->Data(), pkt->Size());
 }
 
-void RtpSession::OnRtpPacketGenerated(RtpPacket* pkt) {
+void MediaStream::OnRtpPacketGenerated(RtpPacket* pkt) {
   observer_->OnRtpPacketSend(pkt->Data(), pkt->Size());
   RtpPacketSent(pkt);
 }
 
-void RtpSession::OnTimerTimeout() {
+void MediaStream::OnTimerTimeout() {
   auto now_millis = TimeMillis();
   for (auto iter = rtp_streams_.begin(); iter != rtp_streams_.end(); ++iter) {
     auto sr_packet = iter->second->CreateRtcpSenderReport(now_millis);
@@ -254,6 +254,6 @@ void RtpSession::OnTimerTimeout() {
   rtcp_timer_->AsyncWait(200);
 }
 
-void RtpSession::Stop() {
+void MediaStream::Stop() {
   rtcp_timer_.reset();
 }

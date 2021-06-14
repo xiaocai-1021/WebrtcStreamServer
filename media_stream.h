@@ -100,7 +100,7 @@ class RtpStream {
   uint16_t rtx_sequence_number_{0};
 };
 
-class RtpSession : public RtpStream::Observer,
+class MediaStream : public RtpStream::Observer,
                    public Timer::Listener,
                    public RtpPacketizer::Observer {
  public:
@@ -110,7 +110,7 @@ class RtpSession : public RtpStream::Observer,
     virtual void OnRtpPacketSend(uint8_t* data, int size) = 0;
   };
 
-  RtpSession(boost::asio::io_context& io_context, Observer* observer);
+  MediaStream(boost::asio::io_context& io_context, Observer* observer);
 
   void AddRtpStream(const RtpStream::RtpParams& params);
 
