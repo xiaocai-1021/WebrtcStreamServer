@@ -5,3 +5,4 @@ announcedIp = "127.0.0.1"
 signalingServerPort = 8000
 webrtcMinPort = 0
 webrtcMaxPort = 65535
+enableGopCache = true

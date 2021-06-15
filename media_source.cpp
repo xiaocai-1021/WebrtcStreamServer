@@ -1,8 +1,11 @@
 #include "media_source.h"
 
+#include <cassert>
+
 #include "byte_buffer.h"
 #include "utils.h"
 #include "spdlog/spdlog.h"
+#include "server_config.h"
 
 bool MediaSource::IsIOTimeout() {
   int64_t io_time = TimeMillis() - last_io_time_;
@@ -94,18 +97,42 @@ const std::string& MediaSource::Url() const {
 
 void MediaSource::RegisterObserver(Observer* observer) {
   std::lock_guard<std::mutex> guard(observers_mutex_);
-  auto result = std::find(observers_.begin(), observers_.end(), observer);
-  if (result != observers_.end())
-    return;
-  observers_.push_back(observer);
+  if (!ServerConfig::GetInstance().GetEnableGopCache()) {
+    auto result = std::find(observers_.begin(), observers_.end(), observer);
+    if (result == observers_.end())
+      observers_.push_back(observer);
+  } else {
+    auto result = std::find(new_observers_.begin(), new_observers_.end(), observer);
+    if (result == new_observers_.end())
+      new_observers_.push_back(observer);
+  }
+}
+
+void MediaSource::CheckNewObserver() {
+  std::lock_guard<std::mutex> guard(observers_mutex_);
+  auto cached_packets = gop_cache_.GetCachedPackets();
+
+  for (auto iter : new_observers_) {
+    for (auto packet : cached_packets) {
+      iter->OnMediaPacketGenerated(packet);
+    }
+    auto result = std::find(observers_.begin(), observers_.end(), iter);
+    if (result == observers_.end())
+      observers_.push_back(iter);
+  }
+  new_observers_.clear();
 }
 
 void MediaSource::DeregisterObserver(Observer* observer) {
   std::lock_guard<std::mutex> guard(observers_mutex_);
   auto result = std::find(observers_.begin(), observers_.end(), observer);
-  if (result == observers_.end())
-    return;
-  observers_.erase(result);
+  if (result != observers_.end())
+    observers_.erase(result);
+  if (ServerConfig::GetInstance().GetEnableGopCache()) {
+    auto result = std::find(new_observers_.begin(), new_observers_.end(), observer);
+    if (result != new_observers_.end())
+      new_observers_.erase(result);
+  }
 }
 
 void MediaSource::Stop() {
@@ -133,6 +160,8 @@ void MediaSource::ReadPacket() {
   AVPacket packet;
 
   while (!closed_) {
+    if (ServerConfig::GetInstance().GetEnableGopCache())
+      CheckNewObserver();
     UpdateIOTime();
     if (av_read_frame(stream_context_, &packet) < 0) {
       StreamEnd();
@@ -157,6 +186,8 @@ void MediaSource::ReadPacket() {
       std::lock_guard<std::mutex> guard(observers_mutex_);
       for (auto observer : observers_)
         observer->OnMediaPacketGenerated(p);
+      if (ServerConfig::GetInstance().GetEnableGopCache())
+        gop_cache_.AddPacket(p);
     } else if (packet.stream_index == audio_index_) {
       if (is_first_audio_packet_) {
         first_audio_packet_timestamp_ms_ = packet.pts;
@@ -176,6 +207,8 @@ void MediaSource::ReadPacket() {
           std::lock_guard<std::mutex> guard(observers_mutex_);
           for (auto observer : observers_)
             observer->OnMediaPacketGenerated(p);
+            if (ServerConfig::GetInstance().GetEnableGopCache())
+              gop_cache_.AddPacket(p);
         });
       }
       opus_transcoder_->Transcode(&packet);

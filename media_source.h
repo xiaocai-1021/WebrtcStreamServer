@@ -11,6 +11,7 @@
 
 #include "media_packet.h"
 #include "opus_transcoder.h"
+#include "gop_cache.h"
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -40,6 +41,7 @@ class MediaSource {
   bool IsIOTimeout();
   void UpdateIOTime();
   void StreamEnd();
+  void CheckNewObserver();
   const static int64_t kDefaultIOTimeoutMillis = 10 * 1000; // 10s.
   AVFormatContext* stream_context_{nullptr};
   std::string url_;
@@ -48,10 +50,12 @@ class MediaSource {
   int64_t last_io_time_{-1};
   std::mutex observers_mutex_;
   std::list<Observer*> observers_;
+  std::list<Observer*> new_observers_;
   bool is_first_audio_packet_{true};
   int64_t first_audio_packet_timestamp_ms_{0};
   std::thread work_thread_;
   std::atomic<bool> closed_{false};
   std::unique_ptr<OpusTranscoder> opus_transcoder_;
   AVBSFContext* bit_stream_filter_{nullptr};
+  GopCache gop_cache_;
 };

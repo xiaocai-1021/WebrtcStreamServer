@@ -13,6 +13,7 @@ class ServerConfig {
   uint16_t GetSignalingServerPort() const;
   uint16_t GetWebRtcMaxPort() const;
   uint16_t GetWebRtcMinPort() const;
+  bool GetEnableGopCache() const;
 
  private:
   ServerConfig() = default;
@@ -21,4 +22,5 @@ class ServerConfig {
   uint16_t signaling_server_port_;
   uint16_t webrtc_max_port_;
   uint16_t webrtc_min_port_;
+  bool enable_gop_cache_;
 };

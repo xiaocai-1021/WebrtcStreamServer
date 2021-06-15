@@ -16,6 +16,7 @@ bool ServerConfig::Load(boost::string_view json_file_name) {
     signaling_server_port_  = toml::find<uint16_t>(data, "signalingServerPort");
     webrtc_min_port_ = toml::find<uint16_t>(data, "webrtcMinPort");
     webrtc_max_port_ = toml::find<uint16_t>(data, "webrtcMaxPort");
+    enable_gop_cache_ = toml::find<bool>(data, "enableGopCache");
   } catch (...) {
     spdlog::error("Parse config file failed.");
     return false;
@@ -42,4 +43,8 @@ uint16_t ServerConfig::GetWebRtcMaxPort() const {
 
 uint16_t ServerConfig::GetWebRtcMinPort() const {
   return webrtc_min_port_;
+}
+
+bool ServerConfig::GetEnableGopCache() const {
+  return enable_gop_cache_;
 }
